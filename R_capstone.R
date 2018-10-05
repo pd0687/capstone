@@ -18,7 +18,7 @@ for (i in 1:len) {
   AR_Canada <- arima(Canada_train, order = c(1, 0, 0), method = "ML")
   
   res_loop <- as.numeric(Canada_train[length(Canada_train)] - predict(AR_Canada)$pred)
-  total_res <- total_res + res_loop
+  total_res <- total_res + res_loop^2 # square the residual
   count <- count + 1
   print(total_res)
 }
