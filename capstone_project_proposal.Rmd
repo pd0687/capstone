@@ -1,0 +1,38 @@
+---
+title: "Capstone Project Proposal"
+output: html_document
+---
+
+***
+
+### What is the problem you want to solve?
+
+We are interested in identifying the extent to which developed equity markets possess predictive power.  To do so, we will attempt to fit time series models to broad market index levels for five developed markets: United States, Canada, Europe ex UK, UK, and Japan.  We will model quarterly data, dating back to the 1990's, and will vary the time interval over which we train our model.  But in each instance, our prediction window will be the next available quarter.
+
+### Who is your client and why do they care about this problem? In other words, what will your client DO or DECIDE based on your analysis that they wouldn't have otherwise?
+
+This project is suitable for a few target audiences.  Asset managers would be interested in these findings for purposes of asset allocation as related to various trading strategies that are based on country performance.  Multinational corporations might take interest in this project as a means of forecasting market activity and which markets to best target.  That is, equity markets might proxy for overall economic activity, and a participant might view a country or region more attractively if it witnesses strong economi growth.
+
+### What data are you going to use for this? How will you acquire this data?
+
+The data for the project are index levels of the broad market indices ("BMI's") of the five above-mentioned countries/regions.  Broad market equity indices serve as a measure of a country or region's overall economic activity and are affected by, among other factors, GDP, unemployment, interest rates, and inflation.
+
+The data are available via <https://us.spindices.com/>.  Index levels can be queried therefrom via an outputted Excel file for each of the countries/regions listed above.
+
+### In brief, outline your approach to solving this problem (knowing that this might change later).
+
+For each of the five time series, we will fit an AR(1,0,0) model, training over the past seven quarters to test the eighth quarter.  We will compare the actual level to the predicted one and compute the RMSE and MAPE as the window rolls through the time series.  We will vary the training window to see if shorter or longer windows provide better predictive power.
+
+We will shift to a mean-reverting AR(1,1,0) model, again varying the length of the training period, in order to see if the mean-reverting element better captures the data.  RMSE and MAPE will again be used as metrics.
+
+Including additional prediction windows is beyond the scope of the project.  Most likely, audiences will be interested in predicting the next interval forward.  Unless a clear and conspicuous trend emerges over a long period of time, it is best to keep the prediction window to one period in length.
+
+### What are your deliverables? Typically, this would include code, along with a paper and/or a slide deck.
+
+The deliverables include a summary of the resulting RMSE and MAPE for all five of the index levels, over each of the time series models.  Additionally, time series plots for each iteration can include the fitted model along with 1-, 2-, and 3-standard deviation confidence bands around the model.
+
+The choice of final model might involve a tradeoff among:
+
+* which model performs best in terms of RMSE or MAPE,
+* which least frequently escapes the confidence bands, and
+* which is most robust during periods of high disturbance (such as the financial crisis of 2007-2008).
