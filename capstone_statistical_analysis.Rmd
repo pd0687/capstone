@@ -1,0 +1,80 @@
+---
+title: "capstone_statistical_analysis"
+output: html_document
+---
+
+***
+
+```{r, echo = FALSE, message = FALSE}
+library(xts)
+data <- read.csv("levels2.csv", header = TRUE)
+data$dd.mmm.yy <- as.Date(data$dd.mmm.yy, "%d-%b-%y")
+ts_df <- xts(data[, 3:7], order.by = data[, 2])
+ts_df_diff <- ts_df / lag(ts_df, 1) - 1
+ts_df_diff <- ts_df_diff[2:nrow(ts_df_diff), ]
+```
+
+After we import the data and coerce it to a time series dataset via xts, we first quickly check the range of each level:
+
+```{r, echo = FALSE}
+range_matrix <- as.matrix(apply(ts_df, 2, range))
+rownames(range_matrix) <- c("Low", "High")
+range_matrix
+```
+
+We also check the quantiles for each:
+
+```{r, echo = FALSE}
+apply(ts_df, 2, quantile)
+```
+
+After we first-difference the time series, we again check the range and quantiles:
+
+```{r, echo = FALSE}
+range_matrix_diff <- as.matrix(apply(ts_df_diff, 2, range))
+rownames(range_matrix_diff) <- c("Low", "High")
+range_matrix_diff
+apply(ts_df_diff, 2, quantile)
+```
+
+We now plot the five time series:
+
+```{r, echo = FALSE, message = FALSE}
+library(tidyr)
+library(ggplot2)
+df <- as.data.frame(ts_df)
+df$Date <- rownames(df)
+df$Date <- as.Date(df$Date, foramt = "%Y-%m-%d")
+df_tall <- df %>% gather(key = "Country_Region", value = "Level", -Date)
+ggplot(df_tall, aes(x = Date, y = Level, col = Country_Region)) + geom_point() + facet_wrap(. ~ Country_Region, ncol = 5) + scale_x_date(date_labels = "%Y", date_breaks = "6 years")
+```
+
+We now fit a linear trend to each of the time series:
+
+```{r, echo = FALSE}
+ggplot(df_tall, aes(x = Date, y = Level, col = Country_Region)) + geom_point() + geom_smooth(method = "lm", se = TRUE, col = "black") + facet_wrap(. ~ Country_Region, ncol = 5) + scale_x_date(date_labels = "%Y", date_breaks = "6 years")
+```
+
+It appears as if a linear model will not effectively capture the dynamics of any of the time series.
+
+We now plot a histogram for each of the quarterly returns series:
+
+```{r, echo = FALSE, message = FALSE}
+df_diff <- as.data.frame(ts_df_diff)
+df_diff$Date <- rownames(df_diff)
+df_diff$Date <- as.Date(df_diff$Date, foramt = "%Y-%m-%d")
+df_diff_tall <- df_diff %>% gather(key = "Country_Region", value = "Level", -Date)
+ggplot(df_diff_tall, aes(x = Level, fill = Country_Region)) + geom_histogram() + facet_wrap(. ~ Country_Region, ncol = 5)
+```
+
+We now check to see how well the quarterly returns can be modeled by a Gaussian distribution:
+
+```{r, echo = FALSE}
+KS <- apply(ts_df_diff, 2, ks.test, "pnorm")
+KS_pvalues <- unlist(lapply(KS, '[[', 2))
+KS_pvalues <- as.matrix(t(KS_pvalues))
+rownames(KS_pvalues) <- "P value"
+KS_pvalues
+```
+
+Applying the Kolmogorov-Smirnov test suggests that the returns for all of the time series do not follow a Gaussian distribution, and hence we must take a measured approach we any further exploration.
