@@ -21,7 +21,7 @@ The data are available via <https://us.spindices.com/>.  Index levels can be que
 
 ### In brief, outline your approach to solving this problem (knowing that this might change later).
 
-For each of the five time series, we will fit an AR(1,0,0) model, training over the past seven quarters to test the eighth quarter.  We will compare the actual level to the predicted one and compute the RMSE and MAPE as the window rolls through the time series.  We will vary the training window to see if shorter or longer windows provide better predictive power.
+For each of the five time series, we will fit an autoregressive (AR(1,0,0)) model, training over the past seven quarters to test the eighth quarter.  We will compare the actual level to the predicted one and compute the root mean square error (RMSE) and mean absolute percentage error (MAPE) as the window rolls through the time series.  We will vary the training window to see if shorter or longer windows provide better predictive power.
 
 We will shift to a mean-reverting AR(1,1,0) model, again varying the length of the training period, in order to see if the mean-reverting element better captures the data.  RMSE and MAPE will again be used as metrics.
 
@@ -29,10 +29,10 @@ Including additional prediction windows is beyond the scope of the project.  Mos
 
 ### What are your deliverables? Typically, this would include code, along with a paper and/or a slide deck.
 
-The deliverables include a summary of the resulting RMSE and MAPE for all five of the index levels, over each of the time series models.  Additionally, time series plots for each iteration can include the fitted model along with 1-, 2-, and 3-standard deviation confidence bands around the model.
+The deliverables include a summary of the resulting RMSE and MAPE for all five of the index levels, over each of the time series models.  Additionally, time series plots for each iteration can include the fitted model along with 1-, 2-, and 3-standard deviation prediction bands around the model.  We will then summarize the percentage of actual observations that lie within each of the prediction bands.
 
 The choice of final model might involve a tradeoff among:
 
 * which model performs best in terms of RMSE or MAPE,
-* which least frequently escapes the confidence bands, and
+* which least frequently escapes the prediction bands, and
 * which is most robust during periods of high disturbance (such as the financial crisis of 2007-2008).
