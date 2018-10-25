@@ -5,25 +5,25 @@ output: html_document
 
 ***
 
-```{r, echo = FALSE}
+```{r, echo = TRUE}
 data <- read.csv("levels2.csv", header = TRUE)
 ```
 
 The dataset ranges from `r data[1,2]` to `r data[nrow(data), 2]`.  Given that we are only concerned with end-of-quarter data in order to align the periodicity, we remove the last observation, in which case the dataset ranges to `r data[nrow(data) - 1, 2]`.
 
-```{r, echo = FALSE}
+```{r, echo = TRUE}
 data <- data[1:nrow(data)-1, ]
 ```
 
 When we check the structure of the dataset:
 
-```{r, echo = FALSE}
+```{r, echo = TRUE}
 str(data)
 ```
 
 We see that the full-date column is of type "factor," so we are best to coerce it to a date `r data$dd.mmm.yy <- as.Date(data$dd.mmm.yy, format = "%d-%b-%y")`and then re-check the structure:
 
-```{r, echo = FALSE}
+```{r, echo = TRUE}
 str(data$dd.mmm.yy)
 ```
 
@@ -35,7 +35,7 @@ And that the months are quarterly: `r unique(as.numeric(format(data$dd.mmm.yy, "
 
 And we see that every quarterly date is accounted for in the time series:
 
-```{r, echo = FALSE}
+```{r, echo = TRUE}
 table(as.numeric(format(data$dd.mmm.yy, "%Y")), as.numeric(format(data$dd.mmm.yy, "%m")))
 ```
 
