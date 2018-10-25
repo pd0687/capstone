@@ -28,7 +28,7 @@ We also check the quantiles for each:
 apply(ts_df, 2, quantile)
 ```
 
-After we first-difference the time series, we again check the range and quantiles:
+Examining the time series' quarterly returns, we again check the range and quantiles:
 
 ```{r, echo = FALSE}
 range_matrix_diff <- as.matrix(apply(ts_df_diff, 2, range))
@@ -37,7 +37,7 @@ range_matrix_diff
 apply(ts_df_diff, 2, quantile)
 ```
 
-We now plot the five time series:
+We plot the five time series:
 
 ```{r, echo = FALSE, message = FALSE}
 library(tidyr)
@@ -49,7 +49,7 @@ df_tall <- df %>% gather(key = "Country_Region", value = "Level", -Date)
 ggplot(df_tall, aes(x = Date, y = Level, col = Country_Region)) + geom_point() + facet_wrap(. ~ Country_Region, ncol = 5) + scale_x_date(date_labels = "%Y", date_breaks = "6 years")
 ```
 
-We now fit a linear trend to each of the time series:
+Then we fit a linear trend to each of the time series:
 
 ```{r, echo = FALSE}
 ggplot(df_tall, aes(x = Date, y = Level, col = Country_Region)) + geom_point() + geom_smooth(method = "lm", se = TRUE, col = "black") + facet_wrap(. ~ Country_Region, ncol = 5) + scale_x_date(date_labels = "%Y", date_breaks = "6 years")
@@ -67,14 +67,14 @@ df_diff_tall <- df_diff %>% gather(key = "Country_Region", value = "Level", -Dat
 ggplot(df_diff_tall, aes(x = Level, fill = Country_Region)) + geom_histogram() + facet_wrap(. ~ Country_Region, ncol = 5)
 ```
 
-We now check to see how well the quarterly returns can be modeled by a Gaussian distribution:
+We then check to see how well the quarterly returns can be modeled by a Gaussian distribution:
 
 ```{r, echo = FALSE}
-KS <- apply(ts_df_diff, 2, ks.test, "pnorm")
-KS_pvalues <- unlist(lapply(KS, '[[', 2))
-KS_pvalues <- as.matrix(t(KS_pvalues))
-rownames(KS_pvalues) <- "P value"
-KS_pvalues
+SW <- apply(ts_df_diff, 2, shapiro.test)
+SW_pvalues <- unlist(lapply(SW, '[[', 2))
+SW_pvalues <- as.matrix(t(SW_pvalues))
+rownames(SW_pvalues) <- "P value"
+SW_pvalues
 ```
 
-Applying the Kolmogorov-Smirnov test suggests that the returns for all of the time series do not follow a Gaussian distribution, and hence we must take a measured approach we any further exploration.
+Applying the Shapiro-Wilk test suggests that the returns for all of the time series except for those of Japan do not follow a Gaussian distribution, and hence we must take a measured approach we any further exploration.
