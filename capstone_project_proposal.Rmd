@@ -11,7 +11,7 @@ We are interested in identifying the extent to which developed equity markets po
 
 ### Who is your client and why do they care about this problem? In other words, what will your client DO or DECIDE based on your analysis that they wouldn't have otherwise?
 
-This project is suitable for a few target audiences.  Asset managers would be interested in these findings for purposes of asset allocation as related to various trading strategies that are based on country performance.  Multinational corporations might take interest in this project as a means of forecasting market activity and which markets to best target.  That is, equity markets might proxy for overall economic activity, and a participant might view a country or region more attractively if it witnesses strong economi growth.
+This project is suitable for a few target audiences.  Asset managers would be interested in these findings for purposes of asset allocation as related to various trading strategies that are based on country performance.  Multinational corporations might take interest in this project as a means of forecasting market activity and which markets to best target.  That is, equity markets might proxy for overall economic activity, and a participant might view a country or region more attractively if it witnesses strong economic growth.
 
 ### What data are you going to use for this? How will you acquire this data?
 
@@ -21,7 +21,7 @@ The data are available via <https://us.spindices.com/>.  Index levels can be que
 
 ### In brief, outline your approach to solving this problem (knowing that this might change later).
 
-For each of the five time series, we will fit an autoregressive (AR(1,0,0)) model, training over the past seven quarters to test the eighth quarter.  We will compare the actual level to the predicted one and compute the root mean square error (RMSE) and mean absolute percentage error (MAPE) as the window rolls through the time series.  We will vary the training window to see if shorter or longer windows provide better predictive power.
+For each of the five time series, we will fit an autoregressive (AR(1,0,0)) model, training over the past N quarters to test the next quarter.  We will compare the actual level to the predicted one and compute the root mean square error (RMSE) and mean absolute percentage error (MAPE) as the window rolls through the time series.  We will vary the training window to see if shorter or longer windows provide better predictive power.
 
 We will shift to a mean-reverting AR(1,1,0) model, again varying the length of the training period, in order to see if the mean-reverting element better captures the data.  RMSE and MAPE will again be used as metrics.
 
