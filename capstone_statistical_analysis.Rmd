@@ -73,7 +73,9 @@ df_diff$Date <- as.Date(df_diff$Date, foramt = "%Y-%m-%d")
 df_diff_tall <- df_diff %>% gather(key = "Country_Region", value = "Level", -Date)
 ggplot(df_diff_tall, aes(x = Level, fill = Country_Region)) + 
   geom_histogram() + 
-  facet_wrap(. ~ Country_Region, ncol = 5)
+  facet_wrap(. ~ Country_Region, ncol = 5) + 
+  xlab("Quarterly Returns") +
+  ylab("Count")
 ```
 
 We then check to see how well the quarterly returns can be modeled by a Gaussian distribution via the Shapiro-Wilk test:
