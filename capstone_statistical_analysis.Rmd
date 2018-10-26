@@ -1,5 +1,5 @@
 ---
-title: "capstone_statistical_analysis"
+title: "Capstone Statistical Analysis"
 output: html_document
 ---
 
@@ -46,7 +46,10 @@ df <- as.data.frame(ts_df)
 df$Date <- rownames(df)
 df$Date <- as.Date(df$Date, foramt = "%Y-%m-%d")
 df_tall <- df %>% gather(key = "Country_Region", value = "Level", -Date)
-ggplot(df_tall, aes(x = Date, y = Level, col = Country_Region)) + geom_point() + facet_wrap(. ~ Country_Region, ncol = 5) + scale_x_date(date_labels = "%Y", date_breaks = "6 years")
+ggplot(df_tall, aes(x = Date, y = Level, col = Country_Region)) + 
+  geom_point() + 
+  facet_wrap(. ~ Country_Region, ncol = 5) + 
+  scale_x_date(date_labels = "%Y", date_breaks = "6 years")
 ```
 
 Then we fit a linear trend to each of the time series:
@@ -68,10 +71,12 @@ df_diff <- as.data.frame(ts_df_diff)
 df_diff$Date <- rownames(df_diff)
 df_diff$Date <- as.Date(df_diff$Date, foramt = "%Y-%m-%d")
 df_diff_tall <- df_diff %>% gather(key = "Country_Region", value = "Level", -Date)
-ggplot(df_diff_tall, aes(x = Level, fill = Country_Region)) + geom_histogram() + facet_wrap(. ~ Country_Region, ncol = 5)
+ggplot(df_diff_tall, aes(x = Level, fill = Country_Region)) + 
+  geom_histogram() + 
+  facet_wrap(. ~ Country_Region, ncol = 5)
 ```
 
-We then check to see how well the quarterly returns can be modeled by a Gaussian distribution:
+We then check to see how well the quarterly returns can be modeled by a Gaussian distribution via the Shapiro-Wilk test:
 
 ```{r, echo = FALSE}
 SW <- apply(ts_df_diff, 2, shapiro.test)
