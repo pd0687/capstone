@@ -1,5 +1,5 @@
 ---
-title: "apply_ML_to_capstone"
+title: "Apply Machine Learning to Capstone Project"
 output: html_document
 ---
 
@@ -7,7 +7,7 @@ output: html_document
 
 ### How do you frame your main question as a machine learning problem? Is it a supervised or unsupervised problem? If it is supervised, is it a regression or a classification?
 
-Within the scope of machine learning, we can approach our data through the lens of a regression (and hence, supervised) problem, more specifically time series regression.  We are looking to explore what is the extent of the predictive power that the time series witness for each of the five countries/regions: given a quarterly time series, can the most recent three quarters predict the next-coming fourth?  Can the last seven quarters predict the eighth?  Can the last eleven quarters predict the twelfth?  Furthermore, we can adjust the time series regression to see if a mean-reverting model makes for better predictions.
+Within the scope of machine learning, we can approach our data through the lens of a regression (and hence, supervised) problem, more specifically time series regression.  We are looking to explore what is the extent of the predictive power that the time series witness for each of the five countries/regions: given a quarterly time series, can the most recent three quarters predict the next-coming fourth?  Can the last seven quarters predict the eighth?  Can the last eleven quarters predict the twelfth?
 
 ### What are the main features (also called independent variables or predictors) that you'll use?
 
@@ -15,8 +15,8 @@ The mean features that we'll use are the lagged observations in the time series.
 
 ### Which machine learning technique will you use?
 
-As stated previously, we can implement a time series regession using an autoregressive (AR(1,0,0)) model and (to account for any mean-reversion) an AR(1,1,0) model.  We will train our model using the past n observations in the time series and will then test by predicting the latest observation.  We will roll the training and testing through the time series.  We will also vary the length of the prediction window, while all throughout keeping the testing window to the next quarterly observation.
+As stated previously, we can implement a time series regession using an autoregressive (AR(1,0,0)) model.  We will train our model using the past N observations in the time series and will then test by predicting the latest observation.  We will roll the training and testing through the time series.  We will also vary the length of the prediction window, while all throughout keeping the testing window to the next quarterly observation.
 
 ### How will you evaluate the success of your machine learning technique? What metric will you use?
 
-At each iteration of the time series regression, we will compare the predicted and actual observations and compute the residual and percent error.  Upon looping through the time series, we will aggregate the residuals in order to compute the root mean square error (RMSE) and mean absolute prediction error (MAPE).  We can additionally test the percentage of actual observations that fell within the 1-, 2-, and 3-standard deviation prediction bands.  These metrics can be used to determine which model performs best.  It might be that one model provides accurate predictions most of the time yet is prone to outlying predictions on rare occasions, whereas another model is lacking in RMSE or MAPE yet witnesses actual observations that routinely fall within the confidence bands.  Discretion must then be exercised when settling on one, final model.
+At each iteration of the time series regression, we will compare the predicted and actual observations and compute the residual and percent error.  After looping through the time series, we will aggregate the residuals in order to compute the root mean square error (RMSE) and mean absolute prediction error (MAPE).  We can additionally test the percentage of actual observations that fell within the 1-, 2-, and 3-standard deviation prediction bands.  These metrics can be used to determine which model performs best.  It might be that one model provides accurate predictions most of the time yet is prone to outlying predictions on rare occasions, whereas another model is lacking in RMSE or MAPE yet witnesses actual observations that routinely fall within the prediction bands.  Discretion must then be exercised when settling on one, final model.
