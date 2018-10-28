@@ -1,0 +1,397 @@
+---
+title: "Autoregressive Modeling of Quarterly Returns of Broad Market Indices for Developed Universes"
+author: Philip Demeri
+date: October 26, 2018
+output: slidy_presentation
+---
+
+***
+```{r include = FALSE}
+#########################################
+########## code chunk settings ##########
+#########################################
+
+knitr::opts_chunk$set(comment = NA, echo = FALSE, message = FALSE, warning = FALSE, fig.align = 'center')
+```
+
+### Objective
+
+This project explores the predictive nature of quarterly returns of equity markets for five developed universes: Canada, Europe ex UK, Japan, the United Kingdom, and the United States.  Proxies for each of the equity markets are the respective broad market indices ("BMI's") for each of the universes.  Prediction will be explored by rolling a time series regression through each of the series, training on N observations and testing the next observation.  A resulting summary output will include, for each time series regression:
+
+  * root mean square error (RMSE);
+  * mean absolute percentage error (MAPE); and
+  * the percentage of actual observations that lie within a 1-, 2-, and 3-standard deviation prediction band.
+
+***
+
+### Background
+
+One popular, though not always representative, measure of overall economic activity within a country or region is a broad market equity index.  The constituents of each index are stocks of underlying companies that are headquartered or domiciled within the given country or region.  The performances of the stocks will aggregate in order to determine a final index level, which equals the sum of the market capitalizations (price multiplied by shares outstanding) of each stock divided by a divisor, which serves as a normalization constant:
+
+$$Index Level_t = \frac{\sum_{i=1}^n MC_i}{Divisor_t}$$
+
+The index levels are thus largely a function of the constituent market caps: if the stocks in the index exhibit positive performance, their prices will increase, which increases their market caps, thus increasing the index level.
+
+The time series for the project are the quarterly returns (end-of-quarter) of the index levels for each of the five universes, from March 1995 to June 2018.  The time series are gathered from <https://us.spindices.com/>.
+
+***
+
+### Exploratory Data Analysis
+
+Before we compute the rolling regressions, we first examine how well the quarterly returns can be modeled by a normal distribution via the Shapiro Wilk test:
+
+```{r}
+###################################################################################################
+########## import data, transform to quarterly returns time series, compute Shapiro Wilk ##########
+###################################################################################################
+
+library(xts)
+levels <- read.csv("levels2.csv", header = TRUE)
+levels <- levels[1:nrow(levels) - 1, ] # remove last row (not quarterly)
+days <- as.Date(levels$dd.mmm.yy, "%d-%b-%y") # coercing to "date"
+levels <- xts(levels[, 3:ncol(levels)], order.by = days)
+levels <- levels / lag(levels, 1) - 1
+levels <- levels[2:nrow(levels), ]
+SW <- apply(levels, 2, shapiro.test)
+SW_pvalues <- unlist(lapply(SW, '[[', 2))
+SW_pvalues <- as.matrix(t(SW_pvalues))
+rownames(SW_pvalues) <- "P value"
+SW_pvalues
+```
+
+We see that all of the returns save for Japan's cannot adequately be modeled by a normal distribution, and hence caution must be exercised regarding assumptions that we make regarding the returns.
+
+We additionally check the (annualized) standard deviation of each of the time series:
+
+```{r}
+######################################################
+########## SD's for each of the time series ##########
+######################################################
+
+SD <- apply(levels, 2, sd) * sqrt(4)
+SD <- as.matrix(t(SD))
+rownames(SD) <- "Standard deviation"
+SD
+```
+
+We see that the returns for the US are least volatile, followed by the UK.  However, given the results of the Shapiro Wilk test, standard deviation alone cannot fully describe the dispersion in the returns.
+
+***
+
+We examine the skewness and the kurtosis:
+
+```{r}
+###############################################################
+########## skewness and kurtosis for the time series ##########
+###############################################################
+
+library(moments)
+skew <- apply(levels, 2, skewness)
+kurt <- apply(levels, 2, kurtosis)
+S_K <- as.matrix(t(cbind(skew,kurt)))
+rownames(S_K) <- c("Skewness", "Kurtosis")
+S_K
+```
+
+All time series exhibit some skew, yet the most pronounced are Canada's and the US's.  Save for Japan, all exhibit excess kurtosis.
+
+***
+
+### The AR Model
+
+We will roll an autoregressive model of lag-1, AR(1,0,0), through each of the time series, where we train our model on the past N observations and then test the upcoming observation.  We will fit an AR model of 4, 8, and 12 quarters, where we train on the past 3, 7, and 11 observations, respectively, and then test the 4th, 8th, and 12th observations, respectively.  Hence, we will construct 15 runs of regressions (3 rolling window lengths times 5 universes).
+
+We will construct our AR model such that the parameters at each iteration are consistent with the method of maximum likelihood, given that the coefficient of the fitted parameter in the absence of maximum likelihood estimation might be greater in magnitude than one.
+
+Summary output will include, for each of the 15 runs, RMSE, MAPE, and the percentage of observations that lie within 1-, 2-, and 3-standard deviation prediction bands.  The prediction band is equal to the level of the predicted observation plus or minus K standard deviations times the model standard error.
+
+***
+
+### The Results
+```{r}
+#######################################################################
+########## main code to generate the time series regressions ##########
+#######################################################################
+
+library(ggplot2)
+
+strat_names <- c("Canada 4-Quarter", "Japan 4-Quarter", "UK 4-Quarter",
+               "US 4-Quarter", "Europe 4-Quarter", "Canada 8-Quarter",
+               "Japan 8-Quarter", "UK 8-Quarter", "US 8-Quarter",
+               "Europe 8-Quarter", "Canada 12-Quarter", "Japan 12-Quarter",
+               "UK 12-Quarter", "US 12-Quarter", "Europe 12-Quarter")
+
+days <- index(levels)
+total_res <- 0
+res_loop <- 0
+count <- 0 # count the number of iterations
+rw <- c(4, 8, 12) # rolling window
+RMSE_vector <- matrix(rep(0, length(rw) * (ncol(levels))))
+rownames(RMSE_vector) <- strat_names
+colnames(RMSE_vector) <- "RMSE"
+MAPE_vector <- matrix(rep(0, length(rw) * (ncol(levels))))
+rownames(MAPE_vector) <- strat_names
+colnames(MAPE_vector) <- "MAPE"
+df_list <- list()
+ggplots <- list()
+SD_pct_matrix <- matrix(0, nrow = length(rw) * (ncol(levels)),
+                 ncol = 3)
+colnames(SD_pct_matrix) <- c("1 SD", "2 SD", "3 SD")
+rownames(SD_pct_matrix) <- strat_names
+
+#####################################################################
+####### looping over the 4-, 8-, and 12-month rolling windows #######
+#####################################################################
+
+
+for (i in rw) {
+
+  days_minus_rw <- days[(i + 1):length(days)]
+
+  predict_vector <- rep(0, nrow(levels) - i)
+
+  predict_vector_1_upper <- rep(0, nrow(levels) - i)
+  predict_vector_1_lower <- rep(0, nrow(levels) - i)
+  predict_vector_2_upper <- rep(0, nrow(levels) - i)
+  predict_vector_2_lower <- rep(0, nrow(levels) - i)
+  predict_vector_3_upper <- rep(0, nrow(levels) - i)
+  predict_vector_3_lower <- rep(0, nrow(levels) - i)
+
+  len <- as.numeric(nrow(levels)) - i
+
+
+#####################################################################
+####### looping over 5 countries/regions in the levels dataset ######
+#####################################################################
+
+  
+    for (j in 1:ncol(levels)) {
+ 
+      levels_country <- ts(levels[,j], frequency = 4)
+      
+      actual_vector <- levels_country[(i + 1):length(levels_country)]
+
+
+#####################################################################
+################## looping through the time series ##################
+#####################################################################
+
+
+      for (k in 1:len) {
+        
+        country_rw_Q <- levels_country[k:(i+k-1)]
+        
+        country_train <- country_rw_Q[1:length(country_rw_Q)-1]
+        
+        AR_model <- suppressWarnings(tryCatch(arima(country_train,
+                    order = c(1, 0, 0), method = "ML",
+                    optim.control = list(maxit = 2000)),
+                    error = function(x)
+                      arima(country_train, order = c(1, 0, 0),
+                            method = "ML",
+                            optim.control = list(maxit = 2000),
+                            transform.pars = FALSE)))
+      
+        res_loop <- as.numeric(country_train[length(country_train)] - 
+                    predict(AR_model)$pred)
+
+        predict_vector[k] <- predict(AR_model)$pred
+
+        predict_vector_1_upper[k] <- predict(AR_model)$pred + 
+                                     1 * sqrt(AR_model$sigma2)
+        predict_vector_1_lower[k] <- predict(AR_model)$pred - 
+                                     1 * sqrt(AR_model$sigma2)
+        predict_vector_2_upper[k] <- predict(AR_model)$pred + 
+                                     2 * sqrt(AR_model$sigma2)
+        predict_vector_2_lower[k] <- predict(AR_model)$pred - 
+                                     2 * sqrt(AR_model$sigma2)
+        predict_vector_3_upper[k] <- predict(AR_model)$pred + 
+                                     3 * sqrt(AR_model$sigma2)
+        predict_vector_3_lower[k] <- predict(AR_model)$pred - 
+                                     3 * sqrt(AR_model$sigma2)
+
+        total_res <- total_res + res_loop^2
+        
+        count <- count + 1
+        
+              }
+      
+
+      
+      ij_iter <- j + ncol(levels) * (which(i == rw) - 1)
+      RMSE_vector[ij_iter] <- sqrt(total_res / count)
+      MAPE_vector[ij_iter] <- rowMeans(abs((t(actual_vector) -
+                              t(predict_vector)) /
+                              t(actual_vector)))
+      SD_pct_matrix[ij_iter,1] <- sum(predict_vector_1_lower <= 
+                                  actual_vector & actual_vector <= 
+                                  predict_vector_1_upper) / len
+      SD_pct_matrix[ij_iter,2] <- sum(predict_vector_2_lower <= 
+                                  actual_vector & actual_vector <= 
+                                  predict_vector_2_upper) / len
+      SD_pct_matrix[ij_iter,3] <- sum(predict_vector_3_lower <= 
+                                  actual_vector & actual_vector <= 
+                                  predict_vector_3_upper) / len
+      df <- as.data.frame(cbind(days_minus_rw, actual_vector,
+            predict_vector, predict_vector_1_upper,
+            predict_vector_1_lower, predict_vector_2_upper,
+            predict_vector_2_lower, predict_vector_3_upper,
+            predict_vector_3_lower))
+      df$days_minus_rw <- as.Date(df$days_minus_rw,
+            origin = "1970-01-01")
+      df_list[[ij_iter]] <- df
+      ggplots <- lapply(df_list,function(x) ggplot(x,
+                 aes(x = days_minus_rw, y = actual_vector, color = "Actual Observation"), size = 1.25) +
+                 geom_point() +
+                 geom_line(aes(y = predict_vector, color = "Predicted Observation"), size = 1.5) +
+                 geom_line(aes(y = predict_vector_3_lower, color = "3 SD")) +
+                 geom_line(aes(y = predict_vector_3_upper, color = "3 SD")) +
+                 labs(x = "Time", y = "Quarterly % Changes", color = "Color"))
+      total_res <- 0 # re-initializing total_res
+      res_loop <- 0 # re-initializing res_loop
+      count <- 0 # re-initializing count
+      
+          }
+  
+
+}
+
+
+#####################################################################
+# couldn't dyamically create titles in main loop, but this loop does
+#####################################################################
+
+
+for (i in rw) {
+  for (j in 1:ncol(levels)) {
+    ij_iter <- j + ncol(levels) * (which(i == rw) - 1)
+    ggplots[[ij_iter]] <- ggplots[[ij_iter]] +
+                          ggtitle(paste(colnames(levels)[j]," ",
+                          i,"-Month", sep = "")) +
+                          theme(plot.title = element_text(hjust = 0.5,
+                          size = 22))
+  }
+}
+
+```
+
+The results appear to be largely intuitive: RMSE and MAPE are generally decreasing in the length of the prediction window, and the percentage of actual observations that lie within a prediction band more closely approach that approximated by a normal distribution as the number of standard deviations increase.
+
+***
+
+RMSE:
+
+```{r}
+###################################################
+########## convert RMSE vector to matrix ##########
+###################################################
+
+dim(RMSE_vector) <- c(5,3) # convert vector to matrix
+colnames(RMSE_vector) <- c("4-Quarter", "8-Quarter", "12-Quarter")
+rownames(RMSE_vector) <- c("Canada", "Japan", "UK", "US", "Europe")
+RMSE_vector
+```
+
+MAPE:
+
+```{r}
+###################################################
+########## convert MAPE vector to matrix ##########
+###################################################
+
+dim(MAPE_vector) <- dim(RMSE_vector) # convert vector to matrix
+colnames(MAPE_vector) <- colnames(RMSE_vector)
+rownames(MAPE_vector) <- rownames(RMSE_vector)
+MAPE_vector
+```
+
+***
+
+% of actual observations that lie within the prediction bands:
+
+```{r}
+#############################################
+########## display accuracy matrix ##########
+#############################################
+
+SD_pct_matrix
+```
+
+***
+
+Plots of the above metrics:
+
+```{r}
+######################################
+########## plot RMSE matrix ##########
+######################################
+
+library(tidyr)
+colnames(RMSE_vector) <- c(4, 8, 12)
+RMSE_df <- as.data.frame(cbind(universe = rownames(RMSE_vector), RMSE_vector))
+RMSE_tall <- gather(RMSE_df, key = RW, value = RMSE, -universe)
+ggplot(RMSE_tall, aes(x = as.numeric(RW), y = as.numeric(RMSE), col = universe)) + 
+  geom_point() + 
+  geom_smooth(aes(group = universe)) + 
+  scale_x_continuous(breaks = seq(4,12,4)) + 
+  scale_y_continuous(breaks = seq(0.08,0.155,0.015)) + 
+  labs(x = "Rolling Window Length (Quarters)", y = "RMSE", title = "RMSE versus Rolling Window Length", col = "Universe") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+***
+
+```{r}
+######################################
+########## plot MAPE matrix ##########
+######################################
+
+colnames(MAPE_vector) <- c(4, 8, 12)
+MAPE_df <- as.data.frame(cbind(universe = rownames(MAPE_vector), MAPE_vector))
+MAPE_tall <- gather(MAPE_df, key = RW, value = MAPE, -universe)
+ggplot(MAPE_tall, aes(x = as.numeric(RW), y = as.numeric(MAPE), col = universe)) + 
+  geom_point() + 
+  geom_smooth(aes(group = universe)) + 
+  scale_x_continuous(breaks = seq(4,12,4)) + 
+  scale_y_continuous(breaks = seq(0.08,0.155,0.015)) + 
+  labs(x = "Rolling Window Length (Quarters)", y = "MAPE", title = "MAPE versus Rolling Window Length", col = "Universe") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+***
+
+```{r}
+##########################################
+########## plot accuracy matrix ##########
+##########################################
+
+colnames(SD_pct_matrix) <- c(1, 2, 3)
+pred_band_df <- as.data.frame(cbind(universe = rep(c("Canada", "Japan", "UK", "US", "Europe"),3), quarter = c(rep(4,5),rep(8,5),rep(12,5)), SD_pct_matrix))
+pred_band_tall <- gather(pred_band_df, key = SD, value = Pct, -universe, -quarter)
+ggplot(pred_band_tall, aes(x = as.numeric(SD), y = as.numeric(Pct), col = factor(quarter, levels = c(4, 8, 12)))) +
+  geom_point() + 
+  geom_smooth(aes(group = quarter)) + 
+  facet_wrap(. ~ universe, ncol = 5) + 
+  scale_x_continuous(breaks = seq(1,3,1)) + 
+  scale_y_continuous(breaks = seq(0.1,0.9,0.2)) + 
+  labs(x = "SD of Prediction Band", y = "% of Actual Observations within Band", col = "Quarter", title = "Prediction Band Accuracy") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+***
+
+### Conclusion
+
+It appears as if the three plots suggest that increasing the rolling window from 4 to 8 quarters results in considerable predictive improvement.  RMSE declines for each of the universes as the length of the prediction window is increased, and the same can be said for all of the universes with respect to Canada and the UK for MAPE.  And notwithstanding that the returns for all except Japan do not adequately resemble a normal distribution, the prediction band plot for each universe demonstrates greater than 90% accuracy in predicting observations within a band of 3 standard deviations.
+
+***
+
+### Future Study
+
+The findings point to a degree of predictability in estimating future observations as we widen the prediction window.  Ideas for further research that stem from this study include:
+
+  * adding exogenous factors (e.g., GDP, unemployment, etc.) to the regression model, as they have been shown to demonstrably influence equity markets;
+  * given that the returns appear to be mean-reverting (i.e., no discernible upward or downward trend appears to develop in the returns series over time), re-running the regression using an AR(1,1,0) model or a weighted least squares model that underweights more recent observations; and,
+  * examining the interactions among the time series of the five universes to check for any degree of cointegration and/or leading/lagging influence.
