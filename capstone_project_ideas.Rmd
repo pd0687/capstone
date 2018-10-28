@@ -1,0 +1,39 @@
+---
+title: "Three Potential Capstone Project Ideas"
+output: html_document
+---
+
+***
+
+\noindent
+1) Predictive performance of equity markets
+
+Do equity markets contain any embedded trends that might be realized within a time series model, such as an AR or MA model?  For example, is it possible to predict the next quarter's performance based upon, say, the previous 3, 4, 5, etc., quarters?
+
+Given that developed markets (US, Canada, UK, Europe, Japan) tend to witness less volatility than emerging markets (China, India, etc.), I wish to examine if the performance of these markets can be modeled as a stationary process.
+
+It might also be the case that these markets witness mean-reverting behavior, which can also be explored.
+
+Given a quarterly time series of over two decades long, we can gauge how adequately the trend-following and mean-reverting models perform by computing their AIC's and selecting the models whose AIC's are lower.  Once we've decided on which model is better, we can then vary the length of the training period in order to see how well it predicts the next available quarter.  To measure this effectiveness, we can compare RMSE and MAPE.
+
+***
+
+\noindent
+2) Ability of macroeconomic factors to predict equity market performance
+
+How well can macroeconomic factors such as GDP, unemployment, interest rates, inflation, and sentiment predict equity markets?  I wish to devise a multivariate regression using such factors as predictors and equity market levels as the response.
+
+A major consideration for this project is model selection -- how many factors should we use, how to we handle factors that are statistically insignificant while the model as a whole is significant, what should be the time interval for the prediction window (e.g., 3 quarters, 4 quarters, 5 quarters, etc.), what metric should we use to determine which model has the best predictive power (F-stat, RMSE, MAPE, etc.).
+
+***
+
+\noindent
+3) Looking for structure and similarity among macroeconomic factors
+
+Given macroeconomic factors such as those described above, how similarly do they behave after invoking a clustering algorithm?  It might be that the number of macroeconomic factors ultimately reduces to a given number of clusters that perform similarly within each cluster and differently between each cluster.
+
+We can run a K-means algorithm and ultimately settle on a number of clusters that witnesses an optimal WSS / TSS ratio.  Or, we can perform hierarchical clustering, where we select a number of clusters that witnesses the optimal height as per the accompanying dendrogram.
+
+***
+
+Each of the above three projects possesses utility for asset managers who are interested in devising factor-based trading strategies that target a given market.  If, as in project 1, there does exist predictive power to equity markets (whether by trend or by mean-reversion), then a well-crafted trading strategy could exploit this.  Or even if the equity market time series itself is not predictable unto itself, perhaps macro factors, as in project 2, can predict equity market performance.  But consistent with parsimony, can we settle on a suitable number of factors that behave distinctly amongst each other?  Project 3 might provide insight into this.
