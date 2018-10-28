@@ -22,6 +22,8 @@ This project explores the predictive nature of quarterly returns of equity marke
   * mean absolute percentage error (MAPE); and
   * the percentage of actual observations that lie within a 1-, 2-, and 3-standard deviation prediction band.
 
+This project is suitable for a few target audiences.  Asset managers would be interested in these findings for purposes of devising trading strategies that are based on country or region performance.  Multinational corporations might take interest in this project as a means of forecasting market activity and which markets to best target.
+
 ### Background
 
 One popular, though not always representative, measure of overall economic activity within a country or region is a broad market equity index.  The constituents of each index are stocks of underlying companies that are headquartered or domiciled within the given country or region.  The performances of the stocks will aggregate in order to determine a final index level, which equals the sum of the market capitalizations (price multiplied by shares outstanding) of each stock divided by a divisor, which serves as a normalization constant:
