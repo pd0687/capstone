@@ -22,6 +22,8 @@ This project explores the predictive nature of quarterly returns of equity marke
   * mean absolute percentage error (MAPE); and
   * the percentage of actual observations that lie within a 1-, 2-, and 3-standard deviation prediction band.
 
+This project is suitable for a few target audiences.  Asset managers would be interested in these findings for purposes of devising trading strategies that are based on country or region performance.  Multinational corporations might take interest in this project as a means of forecasting market activity and which markets to best target.
+
 ***
 
 ### Background
