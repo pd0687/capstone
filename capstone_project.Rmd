@@ -1,11 +1,16 @@
 ---
 title: "Autoregressive Modeling of Quarterly Returns of Broad Market Indices for Developed Universes"
 author: Philip Demeri
+date: October 26, 2018
 output: html_document
 ---
 
 ***
 ```{r include = FALSE}
+#########################################
+########## code chunk settings ##########
+#########################################
+
 knitr::opts_chunk$set(comment = NA, echo = FALSE, message = FALSE, warning = FALSE, fig.align = 'center')
 ```
 
@@ -13,9 +18,9 @@ knitr::opts_chunk$set(comment = NA, echo = FALSE, message = FALSE, warning = FAL
 
 This project explores the predictive nature of quarterly returns of equity markets for five developed universes: Canada, Europe ex UK, Japan, the United Kingdom, and the United States.  Proxies for each of the equity markets are the respective broad market indices ("BMI's") for each of the universes.  Prediction will be explored by rolling a time series regression through each of the series, training on N observations and testing the next observation.  A resulting summary output will include, for each time series regression:
 
-  * root mean square error (RMSE),
-  * mean absolute percentage error (MAPE), and
-  * the percentage of actual observations that lie within a 1-, 2-, and 3-standard deviation prediction window.
+  * root mean square error (RMSE);
+  * mean absolute percentage error (MAPE); and
+  * the percentage of actual observations that lie within a 1-, 2-, and 3-standard deviation prediction band.
 
 ### Background
 
@@ -23,13 +28,19 @@ One popular, though not always representative, measure of overall economic activ
 
 $$Index Level_t = \frac{\sum_{i=1}^n MC_i}{Divisor_t}$$
 
+The index levels are thus largely a function of the constituent market caps: if the stocks in the index exhibit positive performance, their prices will increase, which increases their market caps, thus increasing the index level.
+
 The time series for the project are the quarterly returns (end-of-quarter) of the index levels for each of the five universes, from March 1995 to June 2018.  The time series are gathered from <https://us.spindices.com/>.
 
-### Pre-processing
+### Exploratory Data Analysis
 
 Before we compute the rolling regressions, we first examine how well the quarterly returns can be modeled by a normal distribution via the Shapiro Wilk test:
 
 ```{r}
+###################################################################################################
+########## import data, transform to quarterly returns time series, compute Shapiro Wilk ##########
+###################################################################################################
+
 library(xts)
 levels <- read.csv("levels2.csv", header = TRUE)
 levels <- levels[1:nrow(levels) - 1, ] # remove last row (not quarterly)
@@ -46,6 +57,38 @@ SW_pvalues
 
 We see that all of the returns save for Japan's cannot adequately be modeled by a normal distribution, and hence caution must be exercised regarding assumptions that we make regarding the returns.
 
+We additionally check the (annualized) standard deviation of each of the time series:
+
+```{r}
+######################################################
+########## SD's for each of the time series ##########
+######################################################
+
+SD <- apply(levels, 2, sd) * sqrt(4)
+SD <- as.matrix(t(SD))
+rownames(SD) <- "Standard deviation"
+SD
+```
+
+We see that the returns for the US are least volatile, followed by the UK.  However, given the results of the Shapiro Wilk test, standard deviation alone cannot fully describe the dispersion in the returns.
+
+We examine the skewness and the kurtosis:
+
+```{r}
+###############################################################
+########## skewness and kurtosis for the time series ##########
+###############################################################
+
+library(moments)
+skew <- apply(levels, 2, skewness)
+kurt <- apply(levels, 2, kurtosis)
+S_K <- as.matrix(t(cbind(skew,kurt)))
+rownames(S_K) <- c("Skewness", "Kurtosis")
+S_K
+```
+
+All time series exhibit some skew, yet the most pronounced are Canada's and the US's.  Save for Japan, all exhibit excess kurtosis.
+
 ### The AR Model
 
 We will roll an autoregressive model of lag-1, AR(1,0,0), through each of the time series, where we train our model on the past N observations and then test the upcoming observation.  We will fit an AR model of 4, 8, and 12 quarters, where we train on the past 3, 7, and 11 observations, respectively, and then test the 4th, 8th, and 12th observations, respectively.  Hence, we will construct 15 runs of regressions (3 rolling window lengths times 5 universes).
@@ -56,6 +99,10 @@ Summary output will include, for each of the 15 runs, RMSE, MAPE, and the percen
 
 ### The Results
 ```{r}
+#######################################################################
+########## main code to generate the time series regressions ##########
+#######################################################################
+
 library(ggplot2)
 
 strat_names <- c("Canada 4-Quarter", "Japan 4-Quarter", "UK 4-Quarter",
@@ -223,7 +270,11 @@ The results appear to be largely intuitive: RMSE and MAPE are generally decreasi
 RMSE:
 
 ```{r}
-dim(RMSE_vector) <- c(5,3)
+###################################################
+########## convert RMSE vector to matrix ##########
+###################################################
+
+dim(RMSE_vector) <- c(5,3) # convert vector to matrix
 colnames(RMSE_vector) <- c("4-Quarter", "8-Quarter", "12-Quarter")
 rownames(RMSE_vector) <- c("Canada", "Japan", "UK", "US", "Europe")
 RMSE_vector
@@ -232,7 +283,11 @@ RMSE_vector
 MAPE:
 
 ```{r}
-dim(MAPE_vector) <- dim(RMSE_vector)
+###################################################
+########## convert MAPE vector to matrix ##########
+###################################################
+
+dim(MAPE_vector) <- dim(RMSE_vector) # convert vector to matrix
 colnames(MAPE_vector) <- colnames(RMSE_vector)
 rownames(MAPE_vector) <- rownames(RMSE_vector)
 MAPE_vector
@@ -241,12 +296,20 @@ MAPE_vector
 % of actual observations that lie within the prediction bands:
 
 ```{r}
+#############################################
+########## display accuracy matrix ##########
+#############################################
+
 SD_pct_matrix
 ```
 
 Plots of the above metrics:
 
 ```{r}
+######################################
+########## plot RMSE matrix ##########
+######################################
+
 library(tidyr)
 colnames(RMSE_vector) <- c(4, 8, 12)
 RMSE_df <- as.data.frame(cbind(universe = rownames(RMSE_vector), RMSE_vector))
@@ -262,6 +325,10 @@ ggplot(RMSE_tall, aes(x = as.numeric(RW), y = as.numeric(RMSE), col = universe))
 
 
 ```{r}
+######################################
+########## plot MAPE matrix ##########
+######################################
+
 colnames(MAPE_vector) <- c(4, 8, 12)
 MAPE_df <- as.data.frame(cbind(universe = rownames(MAPE_vector), MAPE_vector))
 MAPE_tall <- gather(MAPE_df, key = RW, value = MAPE, -universe)
@@ -276,6 +343,10 @@ ggplot(MAPE_tall, aes(x = as.numeric(RW), y = as.numeric(MAPE), col = universe))
 
 
 ```{r}
+##########################################
+########## plot accuracy matrix ##########
+##########################################
+
 colnames(SD_pct_matrix) <- c(1, 2, 3)
 pred_band_df <- as.data.frame(cbind(universe = rep(c("Canada", "Japan", "UK", "US", "Europe"),3), quarter = c(rep(4,5),rep(8,5),rep(12,5)), SD_pct_matrix))
 pred_band_tall <- gather(pred_band_df, key = SD, value = Pct, -universe, -quarter)
@@ -289,4 +360,14 @@ ggplot(pred_band_tall, aes(x = as.numeric(SD), y = as.numeric(Pct), col = factor
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-It appears as if the three plots suggest that increasing the rolling window from 4 to 8 quarters results in considerable predictive improvement.  And notwithstanding that the returns for all except Japan do not adequately resemble a normal distribution, the prediction band plot for each universe demonstrates greater than 90% accuracy in predicting observations within a band of 3 standard deviations.
+### Conclusion
+
+It appears as if the three plots suggest that increasing the rolling window from 4 to 8 quarters results in considerable predictive improvement.  RMSE declines for each of the universes as the length of the prediction window is increased, and the same can be said for all of the universes with respect to Canada and the UK for MAPE.  And notwithstanding that the returns for all except Japan do not adequately resemble a normal distribution, the prediction band plot for each universe demonstrates greater than 90% accuracy in predicting observations within a band of 3 standard deviations.
+
+### Future Study
+
+The findings point to a degree of predictability in estimating future observations as we widen the prediction window.  Ideas for further research that stem from this study include:
+
+  * adding exogenous factors (e.g., GDP, unemployment, etc.) to the regression model, as they have been shown to demonstrably influence equity markets;
+  * given that the returns appear to be mean-reverting (i.e., no discernible upward or downward trend appears to develop in the returns series over time), re-running the regression using an AR(1,1,0) model or a weighted least squares model that underweights more recent observations; and,
+  * examining the interactions among the time series of the five universes to check for any degree of cointegration and/or leading/lagging influence.
