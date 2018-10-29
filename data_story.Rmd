@@ -1,0 +1,81 @@
+---
+title: "Capstone Data Story"
+author: Philip Demeri
+output: html_document
+---
+
+***
+```{r include = FALSE}
+#########################################
+########## code chunk settings ##########
+#########################################
+
+knitr::opts_chunk$set(comment = NA, echo = FALSE, message = FALSE, warning = FALSE, fig.align = 'center')
+```
+
+
+## Introduction to the problem
+
+We wish to explore how predictable are the time series of broad market equity index returns of developed markets such as the United States, United Kingdom, etc., if we were to implement a rolling autoregressive time series regression through the series?  More specifically, can an AR(1) model trained on the most recent N observations effectively predict the upcoming observation?  How influential are the parameters of the distributions of the underlying datasets, such as standard deviation, skewness, and kurtosis?  How lenghty of a prediction window is sufficient to make for an efficient model -- 4 quarters, or maybe 8 or 12?  We can address these concerns through time series modeling.
+
+
+## Deeper dive into the data set
+
+### What important fields and information does the dataset have?
+
+The datasets contaisn returns of index levels for the broad market indices of five developed markets -- Canada, Europe ex UK, Japan, the UK, and the US.  Each index contains as its constituents the publicly traded stocks of companies that are primarily domiciled or headquartered within the index's particular country or region.  So for example, given that Toyota is headquartered in Japan, it is a member of Japan's broad market index.  Each company issues a given number of publicly traded shares ("shares outstanding"), and the performance of the company determines what is the price of the stock.  The product of stock price and number of shares outstanding is equal to the market capitalization ("market cap") of the company.  The sum of the market caps of each company in the index divided by a divisor, which serves as a normalization constant, determines the index level on a given day t:
+
+$$Index Level_t = \frac{\sum_{i=1}^n MC_i}{Divisor_t}$$
+
+The datasets are quarterly, mapped to the end of each quarter of March, June, September, and December.  And more specifically, given that the datasets contain returns, the return of an index level at quarter t is equal to the index level at quarter t divided by the index level at quarter t-1 minus 1.
+
+$$Index Level Return_t = \frac{Index Level_t}{Index Level_{t-1}}-1$$
+
+The data range from 1995 to 2018.
+
+
+### What are its limitations i.e. what are some questions that you cannot answer with this dataset?
+
+The dataset provides no means of identifying the exact members of the index or the number of members contained in the index.  In the alternative, suppose there existed a FAANG index (where FAANG represents five of the world's largest tech companies: Facebook, Apple, Amazon, Netflix, and Google), then the members would be apparent, as would be the number of constituents.
+
+However, the purpose of the index levels is not to measure the performance of specific companies, but rather the equity universe of that country as a whole.  So if someone were to ask, "How did stocks in the United Kingdom perform today," one might look at the recent performance of the UK broad market index: if it recently increased, then one might claim that UK stocks are doing well, and by extension, the economic climate in UK is doing well.
+
+
+### What kind of cleaning and wrangling did you need to do?
+
+Given that the data were gathered from <https://us.spindices.com/>, not much cleaning or wrangling was needed.  The queried data were daily, so adjustments had to be made to arrange for quarterly data and then to compute the quarterly returns.  Additionally, checks were performed to look for any NA's or missing data points.
+
+
+### Preliminary exploration and initial findings
+
+The initial findings are that when we apply the Shapiro Wilk test for normality to the five time series, we see that four of them cannot adequately be modeled by a normal distribution, and hence caution must be exercised regarding assumptions that underlie the data.
+
+```{r}
+###################################################################################################
+########## import data, transform to quarterly returns time series, compute Shapiro Wilk ##########
+###################################################################################################
+
+library(xts)
+levels <- read.csv("levels2.csv", header = TRUE)
+levels <- levels[1:nrow(levels) - 1, ] # remove last row (not quarterly)
+days <- as.Date(levels$dd.mmm.yy, "%d-%b-%y") # coercing to "date"
+levels <- xts(levels[, 3:ncol(levels)], order.by = days)
+levels <- levels / lag(levels, 1) - 1
+levels <- levels[2:nrow(levels), ]
+SW <- apply(levels, 2, shapiro.test)
+SW_pvalues <- unlist(lapply(SW, '[[', 2))
+SW_pvalues <- as.matrix(t(SW_pvalues))
+rownames(SW_pvalues) <- "P value"
+SW_pvalues
+```
+
+However, departures from normality are not unexpected -- given that the financial crisis occurred in 2007 and 2008, we expect this period to be one of high disturbance.
+
+
+## Based on these findings, what approach are you going to take? How has your approach changed from what you initially proposed, if applicable?
+
+Our approach is to model the timme series through an AR(1) process, using a rolling window of 4, 8, and 12 quarters in length.  So for example, in the 4-quarter model, we will train our model using the past 3 quarters of observations in order to predict the upcoming observation.
+
+For each predictionn, we will compute the residual and summarily output the root mean square error (RMSE) annd mean absolute percentage error (MAPE).  In parallel to our rolling the regression through the time series, we will compute 1-, 2-, and 3-standard deviation prediction bands and we will calculate the percentage of actual observations that lie within each band.
+
+The approach has changed from what was originally proposed in that we have discarded any consideration of AIC.  AIC is outside the scope of the project because all iterations stem from an AR process -- we are not testing among, say, AR versus MA versus ARMA processes (although such testing might be the subject of further study).
