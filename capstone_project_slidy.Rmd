@@ -16,31 +16,33 @@ knitr::opts_chunk$set(comment = NA, echo = FALSE, message = FALSE, warning = FAL
 
 ### Objective
 
-This project explores the predictive nature of quarterly returns of equity markets for five developed universes: Canada, Europe ex UK, Japan, the United Kingdom, and the United States.  Proxies for each of the equity markets are the respective broad market indices ("BMI's") for each of the universes.  Prediction will be explored by rolling a time series regression through each of the series, training on N observations and testing the next observation.  A resulting summary output will include, for each time series regression:
-
-  * root mean square error (RMSE);
-  * mean absolute percentage error (MAPE); and
-  * the percentage of actual observations that lie within a 1-, 2-, and 3-standard deviation prediction band.
-
-This project is suitable for a few target audiences.  Asset managers would be interested in these findings for purposes of devising trading strategies that are based on country or region performance.  Multinational corporations might take interest in this project as a means of forecasting market activity and which markets to best target.
+* This project explores the predictive nature of quarterly returns of equity markets for five developed universes: Canada, Europe ex UK, Japan, the United Kingdom, and the United States.
+* Proxies for each of the equity markets are the respective broad market indices ("BMI's") for each of the universes.
+* Prediction will be explored by rolling a time series regression through each of the series, training on N observations and testing the next observation.
+* A resulting summary output will include, for each time series regression:
+    * root mean square error (RMSE);
+    * mean absolute percentage error (MAPE); and
+    * the percentage of actual observations that lie within a 1-, 2-, and 3-standard deviation prediction band.
 
 ***
 
 ### Background
 
-One popular, though not always representative, measure of overall economic activity within a country or region is a broad market equity index.  The constituents of each index are stocks of underlying companies that are headquartered or domiciled within the given country or region.  The performances of the stocks will aggregate in order to determine a final index level, which equals the sum of the market capitalizations (price multiplied by shares outstanding) of each stock divided by a divisor, which serves as a normalization constant:
+* One popular, though not always representative, measure of overall economic activity within a country or region is a broad market equity index.
+* The constituents of each index are stocks of underlying companies that are headquartered or domiciled within the given country or region.
+* The performances of the stocks will aggregate in order to determine a final index level, which equals the sum of the market capitalizations (price multiplied by shares outstanding) of each stock divided by a divisor, which serves as a normalization constant:
 
 $$Index Level_t = \frac{\sum_{i=1}^n MC_i}{Divisor_t}$$
 
-The index levels are thus largely a function of the constituent market caps: if the stocks in the index exhibit positive performance, their prices will increase, which increases their market caps, thus increasing the index level.
-
-The time series for the project are the quarterly returns (end-of-quarter) of the index levels for each of the five universes, from March 1995 to June 2018.  The time series are gathered from <https://us.spindices.com/>.
+* The index levels are thus largely a function of the constituent market caps: if the stocks in the index exhibit positive performance, their prices will increase, which increases their market caps, thus increasing the index level.
+* The time series for the project are the quarterly returns (end-of-quarter) of the index levels for each of the five universes, from March 1995 to June 2018.
+* The time series are gathered from <https://us.spindices.com/>.
 
 ***
 
 ### Exploratory Data Analysis
 
-Before we compute the rolling regressions, we first examine how well the quarterly returns can be modeled by a normal distribution via the Shapiro Wilk test:
+* Before we compute the rolling regressions, we first examine how well the quarterly returns can be modeled by a normal distribution via the Shapiro Wilk test:
 
 ```{r}
 ###################################################################################################
@@ -61,9 +63,8 @@ rownames(SW_pvalues) <- "P value"
 SW_pvalues
 ```
 
-We see that all of the returns save for Japan's cannot adequately be modeled by a normal distribution, and hence caution must be exercised regarding assumptions that we make regarding the returns.
-
-We additionally check the (annualized) standard deviation of each of the time series:
+* We see that all of the returns save for Japan's cannot adequately be modeled by a normal distribution, and hence caution must be exercised regarding assumptions that we make regarding the returns.
+* We additionally check the (annualized) standard deviation of each of the time series:
 
 ```{r}
 ######################################################
@@ -76,36 +77,16 @@ rownames(SD) <- "Standard deviation"
 SD
 ```
 
-We see that the returns for the US are least volatile, followed by the UK.  However, given the results of the Shapiro Wilk test, standard deviation alone cannot fully describe the dispersion in the returns.
-
-***
-
-We examine the skewness and the kurtosis:
-
-```{r}
-###############################################################
-########## skewness and kurtosis for the time series ##########
-###############################################################
-
-library(moments)
-skew <- apply(levels, 2, skewness)
-kurt <- apply(levels, 2, kurtosis)
-S_K <- as.matrix(t(cbind(skew,kurt)))
-rownames(S_K) <- c("Skewness", "Kurtosis")
-S_K
-```
-
-All time series exhibit some skew, yet the most pronounced are Canada's and the US's.  Save for Japan, all exhibit excess kurtosis.
+* We see that the returns for the US are least volatile, followed by the UK.
+* However, given the results of the Shapiro Wilk test, standard deviation alone cannot fully describe the dispersion in the returns.
 
 ***
 
 ### The AR Model
 
-We will roll an autoregressive model of lag-1, AR(1,0,0), through each of the time series, where we train our model on the past N observations and then test the upcoming observation.  We will fit an AR model of 4, 8, and 12 quarters, where we train on the past 3, 7, and 11 observations, respectively, and then test the 4th, 8th, and 12th observations, respectively.  Hence, we will construct 15 runs of regressions (3 rolling window lengths times 5 universes).
-
-We will construct our AR model such that the parameters at each iteration are consistent with the method of maximum likelihood, given that the coefficient of the fitted parameter in the absence of maximum likelihood estimation might be greater in magnitude than one.
-
-Summary output will include, for each of the 15 runs, RMSE, MAPE, and the percentage of observations that lie within 1-, 2-, and 3-standard deviation prediction bands.  The prediction band is equal to the level of the predicted observation plus or minus K standard deviations times the model standard error.
+* We will roll an autoregressive model of lag-1, AR(1,0,0), through each of the time series, where we train our model on the past N observations and then test the upcoming observation.
+* We will fit an AR model of 4, 8, and 12 quarters, where we train on the past 3, 7, and 11 observations, respectively, and then test the 4th, 8th, and 12th observations, respectively.
+* Summary output will include, RMSE, MAPE, and the percentage of observations that lie within 1-, 2-, and 3-standard deviation prediction bands.
 
 ***
 
@@ -279,57 +260,15 @@ for (i in rw) {
 
 The results appear to be largely intuitive: RMSE and MAPE are generally decreasing in the length of the prediction window, and the percentage of actual observations that lie within a prediction band more closely approach that approximated by a normal distribution as the number of standard deviations increase.
 
-***
-
-RMSE:
-
 ```{r}
-###################################################
-########## convert RMSE vector to matrix ##########
-###################################################
-
-dim(RMSE_vector) <- c(5,3) # convert vector to matrix
-colnames(RMSE_vector) <- c("4-Quarter", "8-Quarter", "12-Quarter")
-rownames(RMSE_vector) <- c("Canada", "Japan", "UK", "US", "Europe")
-RMSE_vector
-```
-
-MAPE:
-
-```{r}
-###################################################
-########## convert MAPE vector to matrix ##########
-###################################################
-
-dim(MAPE_vector) <- dim(RMSE_vector) # convert vector to matrix
-colnames(MAPE_vector) <- colnames(RMSE_vector)
-rownames(MAPE_vector) <- rownames(RMSE_vector)
-MAPE_vector
-```
-
-***
-
-% of actual observations that lie within the prediction bands:
-
-```{r}
-#############################################
-########## display accuracy matrix ##########
-#############################################
-
-SD_pct_matrix
-```
-
-***
-
-Plots of the above metrics:
-
-```{r}
-######################################
-########## plot RMSE matrix ##########
-######################################
+#################################################################
+########## convert RMSE vector to matrix and then plot ##########
+#################################################################
 
 library(tidyr)
+dim(RMSE_vector) <- c(5,3) # convert vector to matrix
 colnames(RMSE_vector) <- c(4, 8, 12)
+rownames(RMSE_vector) <- c("Canada", "Japan", "UK", "US", "Europe")
 RMSE_df <- as.data.frame(cbind(universe = rownames(RMSE_vector), RMSE_vector))
 RMSE_tall <- gather(RMSE_df, key = RW, value = RMSE, -universe)
 ggplot(RMSE_tall, aes(x = as.numeric(RW), y = as.numeric(RMSE), col = universe)) + 
@@ -341,15 +280,16 @@ ggplot(RMSE_tall, aes(x = as.numeric(RW), y = as.numeric(RMSE), col = universe))
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-
 ***
 
 ```{r}
-######################################
-########## plot MAPE matrix ##########
-######################################
+#################################################################
+########## convert MAPE vector to matrix and then plot ##########
+#################################################################
 
-colnames(MAPE_vector) <- c(4, 8, 12)
+dim(MAPE_vector) <- dim(RMSE_vector) # convert vector to matrix
+colnames(MAPE_vector) <- colnames(RMSE_vector)
+rownames(MAPE_vector) <- rownames(RMSE_vector)
 MAPE_df <- as.data.frame(cbind(universe = rownames(MAPE_vector), MAPE_vector))
 MAPE_tall <- gather(MAPE_df, key = RW, value = MAPE, -universe)
 ggplot(MAPE_tall, aes(x = as.numeric(RW), y = as.numeric(MAPE), col = universe)) + 
@@ -360,7 +300,6 @@ ggplot(MAPE_tall, aes(x = as.numeric(RW), y = as.numeric(MAPE), col = universe))
   labs(x = "Rolling Window Length (Quarters)", y = "MAPE", title = "MAPE versus Rolling Window Length", col = "Universe") + 
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
 
 ***
 
@@ -386,14 +325,6 @@ ggplot(pred_band_tall, aes(x = as.numeric(SD), y = as.numeric(Pct), col = factor
 
 ### Conclusion
 
-It appears as if the three plots suggest that increasing the rolling window from 4 to 8 quarters results in considerable predictive improvement.  RMSE declines for each of the universes as the length of the prediction window is increased, and the same can be said for all of the universes with respect to Canada and the UK for MAPE.  And notwithstanding that the returns for all except Japan do not adequately resemble a normal distribution, the prediction band plot for each universe demonstrates greater than 90% accuracy in predicting observations within a band of 3 standard deviations.
-
-***
-
-### Future Study
-
-The findings point to a degree of predictability in estimating future observations as we widen the prediction window.  Ideas for further research that stem from this study include:
-
-  * adding exogenous factors (e.g., GDP, unemployment, etc.) to the regression model, as they have been shown to demonstrably influence equity markets;
-  * given that the returns appear to be mean-reverting (i.e., no discernible upward or downward trend appears to develop in the returns series over time), re-running the regression using an AR(1,1,0) model or a weighted least squares model that underweights more recent observations; and,
-  * examining the interactions among the time series of the five universes to check for any degree of cointegration and/or leading/lagging influence.
+* It appears as if the three plots suggest that increasing the rolling window from 4 to 8 quarters results in considerable predictive improvement.
+* RMSE declines for each of the universes as the length of the prediction window is increased, and the same can be said for all of the universes with respect to Canada and the UK for MAPE.
+* And notwithstanding that the returns for all except Japan do not adequately resemble a normal distribution, the prediction band plot for each universe demonstrates greater than 90% accuracy in predicting observations within a band of 3 standard deviations.
